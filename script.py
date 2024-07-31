@@ -4,6 +4,7 @@ import socket
 import ipaddress
 import re
 import time
+import subprocess
 
 # Function to get the current network range
 def get_network_range():
@@ -43,7 +44,9 @@ def find_manufacturer_name(host):
 target_ip = None
 for host in nm.all_hosts():
     if nm[host].has_tcp(22) and nm[host]['tcp'][22]['state'] == 'open':
+        print(f"Found device with open SSH port: {host}")
         if find_manufacturer_name(host):
+            print(f"Found device with manufacturer name: {manufacturer_name}")
             target_ip = host
             break
 
@@ -64,18 +67,28 @@ if target_ip:
         ssh.connect(target_ip, username=known_username, password=known_password)
         print(f"Successfully logged in to {target_ip}")
         
-        # Open an interactive shell session
-        shell=ssh.invoke_shell()
-        while True:
-            if shell.recv_ready():
-                output = shell.recv(1024).decode('utf-8')
-                print(output, end='')
 
-            command = input("")
-            if command.lower() in ['exit', 'quit']:
-                break
-            shell.send(command + '\n')
-            time.sleep(1)  # Give the shell time to process the command
+        # Open a new Windows Terminal window and run a command
+        command = f'ssh {known_username}@{target_ip} '
+        subprocess.run(['wt', '-w', '0', 'nt', 'cmd', '/k', command], shell=True)
+
+        # Execute a command on the SSH server
+        #stdin, stdout, stderr = ssh.exec_command('ls')
+        #print(stdout.read().decode('utf-8'))
+
+
+        # Open an interactive shell session
+        #shell=ssh.invoke_shell()
+        #while True:
+        #    if shell.recv_ready():
+        #        output = shell.recv(1024).decode('utf-8')
+        #        print(output, end=' ')
+#
+        #    command = input("Enter command to execute (exit/quit to close): ")
+        #    if command.lower() in ['exit', 'quit']:
+        #        break
+        #    shell.send(command + '\n')
+        #    time.sleep(1)  # Give the shell time to process the command
     except paramiko.AuthenticationException:
         print("Authentication failed.")
     except paramiko.SSHException as sshException:
